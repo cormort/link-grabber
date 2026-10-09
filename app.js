@@ -1,1 +1,696 @@
-const $=s=>document.querySelector(s);let pending=[],links=[];const DATA='lg-data-v1',BRAND='lg-brand-v1',uid=()=>crypto.randomUUID?.()||Math.random().toString(36),toast=t=>{const e=$('#toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2000)};function norm(v){try{v=v.trim();if(/^www\./i.test(v))v='https://'+v;const u=new URL(v);if(!/^https?:$/.test(u.protocol))return null;u.hash='';return u.href}catch{return null}}function parseBm(t,src){const d=new DOMParser().parseFromString(t,'text/html'),a=[];function walk(dl,p){let f='';for(const e of dl.children){if(e.tagName==='DT'){const h=e.querySelector(':scope>H3'),x=e.querySelector(':scope>A');if(h)f=h.textContent.trim();if(x){const url=norm(x.href||x.getAttribute('href'));if(url){const u=new URL(url);a.push({id:uid(),title:x.textContent.trim()||u.hostname,url,host:u.hostname,folder:[src,...p,f].filter(Boolean).join(' / '),selected:true})}}const n=e.querySelector(':scope>DL');if(n)walk(n,[...p,f].filter(Boolean))}else if(e.tagName==='DL')walk(e,p)}}const dl=d.querySelector('body>dl,dl');if(dl)walk(dl,[]);return a}function generic(t,s){return [...new Set(t.match(/(?:https?:\/\/|www\.)[^\s<>"']+/gi)||[])].map(norm).filter(Boolean).map(url=>{const u=new URL(url);return{id:uid(),title:u.hostname,url,host:u.hostname,folder:s,selected:true}})}async function prepare(fs){pending=[];$('#fileReport').innerHTML='';for(const f of fs){const t=await f.text(),bm=/NETSCAPE-Bookmark-file|<H3/i.test(t),a=bm?parseBm(t,f.name.replace(/\.html?$/i,'')):generic(t,f.name);pending.push(...a);$('#fileReport').innerHTML+=`<div class=file><span>${f.name}</span><b>${bm?'書籤 HTML':'一般檔案'} · ${a.length} 筆</b></div>`}$('#confirm').disabled=!pending.length;toast(`已偵測 ${pending.length} 筆`)}function dedupe(a,m){if(m==='all')return a;const x=new Map();for(const v of a){if(!x.has(v.url)||m==='last')x.set(v.url,v);else if(m==='merge')x.get(v.url).folder+='；'+v.folder}return[...x.values()]}function render(){const q=$('#q').value.toLowerCase(),f=$('#folder').value,folders=[...new Set(links.map(x=>x.folder))].sort();$('#folder').innerHTML='<option value=all>全部資料夾</option>'+folders.map(x=>`<option>${x}</option>`).join('');if(folders.includes(f))$('#folder').value=f;const a=links.filter(x=>(f==='all'||x.folder===f)&&(!q||`${x.title} ${x.url} ${x.folder}`.toLowerCase().includes(q)));$('#summary').textContent=`共 ${a.length} 筆，已選 ${links.filter(x=>x.selected).length} 筆`;$('#tree').innerHTML=folders.map(x=>`<div class=folder>📁 ${x} <span>(${links.filter(y=>y.folder===x).length})</span></div>`).join('');$('#rows').innerHTML=a.length?a.map(x=>`<div class=row><input type=checkbox data-id="${x.id}" ${x.selected?'checked':''}><div><b>${x.title}</b><small>📁 ${x.folder}</small></div><a href="${x.url}" target=_blank>${x.url}</a><span>${x.host}</span></div>`).join(''):'<div class=empty>沒有符合條件的資料</div>';save()}function save(){localStorage.setItem(DATA,JSON.stringify({links,dedupe:$('#dedupe').value,dark:document.documentElement.classList.contains('dark')}))}function load(){try{const s=JSON.parse(localStorage.getItem(DATA)||'{}');links=s.links||[];$('#dedupe').value=s.dedupe||'first';document.documentElement.classList.toggle('dark',!!s.dark)}catch{}render();applyBrand()}function dl(n,t,type){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([t],{type}));a.href=u;a.download=n;a.click();URL.revokeObjectURL(u)}function chosen(){return links.filter(x=>x.selected)}function applyBrand(){let b={};try{b=JSON.parse(localStorage.getItem(BRAND)||'{}')}catch{}const name=b.name||'LinkGrabber for GitHub',sub=b.subtitle||'免擴充套件整理瀏覽器書籤',color=b.color||'#4f46e5',logo=b.logo||'./assets/logo.svg';$('#brandName').textContent=name;$('#brandSubtitle').textContent=sub;$('#brandLogo').src=logo;$('#logoPreview').src=logo;$('#projectName').value=name;$('#projectSubtitle').value=sub;$('#brandColor').value=color;document.documentElement.style.setProperty('--brand',color);document.title=name}function saveBrand(){const b={name:$('#projectName').value.trim()||'LinkGrabber for GitHub',subtitle:$('#projectSubtitle').value.trim()||'免擴充套件整理瀏覽器書籤',color:$('#brandColor').value,logo:$('#logoPreview').src};localStorage.setItem(BRAND,JSON.stringify(b));applyBrand();$('#settings').close();toast('品牌設定已儲存')}const drop=$('#drop'),files=$('#files');drop.onclick=()=>files.click();drop.onkeydown=e=>{if(e.key==='Enter')files.click()};files.onchange=e=>prepare([...e.target.files]);drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag')};drop.ondragleave=()=>drop.classList.remove('drag');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');prepare([...e.dataTransfer.files])};$('#confirm').onclick=()=>{links=dedupe(pending.map(x=>({...x})),$('#dedupe').value);render();toast(`已匯入 ${links.length} 筆`)};$('#q').oninput=render;$('#folder').onchange=render;$('#rows').onchange=e=>{const x=links.find(x=>x.id===e.target.dataset.id);if(x)x.selected=e.target.checked;render()};$('#all').onclick=()=>{links.forEach(x=>x.selected=true);render()};$('#none').onclick=()=>{links.forEach(x=>x.selected=false);render()};$('#clear').onclick=()=>{links=[];render()};$('#copy').onclick=()=>navigator.clipboard.writeText(chosen().map(x=>x.url).join('\n'));$('#md').onclick=()=>navigator.clipboard.writeText(chosen().map(x=>`- [${x.title}](${x.url})`).join('\n'));$('#csv').onclick=()=>dl('links.csv','\ufeff資料夾,標題,網址,網域\n'+chosen().map(x=>[x.folder,x.title,x.url,x.host].map(v=>'"'+v.replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv');$('#json').onclick=()=>dl('links.json',JSON.stringify(chosen(),null,2),'application/json');$('#print').onclick=()=>window.print();$('#theme').onclick=()=>{document.documentElement.classList.toggle('dark');save()};$('#guideToggle').onclick=()=>{$('.guide').classList.toggle('collapsed');$('#guideToggle').textContent=$('.guide').classList.contains('collapsed')?'展開說明':'收合說明'};$('#openSettings').onclick=()=>$('#settings').showModal();$('#saveBrand').onclick=saveBrand;$('#resetBrand').onclick=()=>{localStorage.removeItem(BRAND);applyBrand()};$('#brandColor').oninput=e=>document.documentElement.style.setProperty('--brand',e.target.value);$('#logoFile').onchange=e=>{const f=e.target.files[0];if(!f)return;if(f.size>1024*1024)return toast('Logo 請小於 1 MB');const r=new FileReader();r.onload=()=>$('#logoPreview').src=r.result;r.readAsDataURL(f)};load();if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
+/**
+ * LinkGrabber for GitHub
+ * 純前端、零相依書籤與網址整理工具
+ */
+
+const $ = s => document.querySelector(s);
+let pending = [];
+let links = [];
+
+const DATA = 'lg-data-v1';
+const BRAND = 'lg-brand-v1';
+
+// 安全產生唯一 ID
+const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
+
+// Toast 提示訊息
+let toastTimer = null;
+function toast(text) {
+  const el = $('#toast');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// HTML 特殊字元轉義（防範 XSS / 程式碼注入）
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// 網址正規化（保留 Hash，支援 SPA 路由與章節錨點，驗證 HTTP/HTTPS 協議）
+function norm(v) {
+  try {
+    if (!v) return null;
+    let urlStr = String(v).trim();
+    if (/^www\./i.test(urlStr)) urlStr = 'https://' + urlStr;
+    const u = new URL(urlStr);
+    if (!/^https?:$/.test(u.protocol)) return null;
+    return u.href;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 解析 Netscape 書籤格式（Chrome, Edge, Firefox, Safari 匯出）
+ * 解決同層書籤誤繼承子資料夾路徑的階層解析問題
+ */
+function parseBm(htmlText, src) {
+  const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+  const result = [];
+
+  function walk(node, path) {
+    const children = Array.from(node.children);
+
+    for (let i = 0; i < children.length; i++) {
+      const el = children[i];
+      const tag = el.tagName.toUpperCase();
+
+      if (tag === 'DT') {
+        const header = el.querySelector(':scope > H3, H3');
+        const link = el.querySelector(':scope > A, A');
+        const childDl = el.querySelector(':scope > DL, DL');
+
+        if (header) {
+          const folderName = header.textContent.trim() || '未命名資料夾';
+          const nextEl = children[i + 1];
+
+          if (childDl) {
+            walk(childDl, [...path, folderName]);
+          } else if (nextEl && nextEl.tagName.toUpperCase() === 'DL') {
+            walk(nextEl, [...path, folderName]);
+            i++; // 跳過已處理之兄弟 DL 節點
+          }
+        } else if (link) {
+          const rawUrl = link.getAttribute('href') || link.href;
+          const url = norm(rawUrl);
+          if (url) {
+            const u = new URL(url);
+            const title = link.textContent.trim() || u.hostname;
+            result.push({
+              id: uid(),
+              title,
+              url,
+              host: u.hostname,
+              folder: [src, ...path].filter(Boolean).join(' / '),
+              selected: true
+            });
+          }
+        } else if (childDl) {
+          walk(childDl, path);
+        }
+      } else if (tag === 'DL') {
+        walk(el, path);
+      }
+    }
+  }
+
+  const rootDl = doc.querySelector('body > dl, dl');
+  if (rootDl) {
+    walk(rootDl, []);
+  } else {
+    // 若無 DL 標籤，退化為提取所有具備 href 的 <a> 標籤
+    const allLinks = doc.querySelectorAll('a[href]');
+    for (const a of allLinks) {
+      const url = norm(a.getAttribute('href') || a.href);
+      if (url) {
+        const u = new URL(url);
+        result.push({
+          id: uid(),
+          title: a.textContent.trim() || u.hostname,
+          url,
+          host: u.hostname,
+          folder: src,
+          selected: true
+        });
+      }
+    }
+  }
+
+  return result;
+}
+
+// 解析 Markdown 連結：- [標題](網址)
+function parseMarkdown(text, src) {
+  const result = [];
+  const mdRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  let match;
+  while ((match = mdRegex.exec(text)) !== null) {
+    const title = match[1].trim();
+    const url = norm(match[2]);
+    if (url) {
+      const u = new URL(url);
+      result.push({
+        id: uid(),
+        title: title || u.hostname,
+        url,
+        host: u.hostname,
+        folder: src,
+        selected: true
+      });
+    }
+  }
+  return result;
+}
+
+// 解析 CSV 格式（支援包含引號的 CSV 及欄位名稱對應）
+function parseCsv(text, src) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (lines.length < 2) return [];
+
+  function splitLine(line) {
+    const fields = [];
+    let cur = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        fields.push(cur.trim());
+        cur = '';
+      } else {
+        cur += char;
+      }
+    }
+    fields.push(cur.trim());
+    return fields;
+  }
+
+  const header = splitLine(lines[0]).map(h => h.replace(/^\ufeff/, '').toLowerCase());
+  const folderIdx = header.findIndex(h => /folder|資料夾|分類|category/.test(h));
+  const titleIdx = header.findIndex(h => /title|標題|名稱|name/.test(h));
+  const urlIdx = header.findIndex(h => /url|網址|連結|link|href/.test(h));
+
+  if (urlIdx === -1) return [];
+
+  const result = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitLine(lines[i]);
+    const rawUrl = cols[urlIdx];
+    const url = norm(rawUrl);
+    if (url) {
+      const u = new URL(url);
+      const title = (titleIdx !== -1 && cols[titleIdx]) ? cols[titleIdx] : u.hostname;
+      const folder = (folderIdx !== -1 && cols[folderIdx]) ? cols[folderIdx] : src;
+      result.push({
+        id: uid(),
+        title,
+        url,
+        host: u.hostname,
+        folder,
+        selected: true
+      });
+    }
+  }
+  return result;
+}
+
+// 一般文字/正則網址提取
+function generic(text, src) {
+  const matches = [...new Set(text.match(/(?:https?:\/\/|www\.)[^\s<>"')]+/gi) || [])];
+  return matches
+    .map(norm)
+    .filter(Boolean)
+    .map(url => {
+      const u = new URL(url);
+      return {
+        id: uid(),
+        title: u.hostname,
+        url,
+        host: u.hostname,
+        folder: src,
+        selected: true
+      };
+    });
+}
+
+// 智慧解析多種格式（HTML、JSON、CSV、Markdown、TXT）
+function parseContent(content, filename) {
+  const baseName = filename.replace(/\.[^.]+$/, '');
+  const trimmed = content.trim();
+
+  // 1. 書籤 HTML
+  if (/\.html?$/i.test(filename) || /NETSCAPE-Bookmark-file|<H3|<DL|<A\s+HREF/i.test(trimmed)) {
+    return parseBm(content, baseName);
+  }
+
+  // 2. JSON 格式（支援本工具匯出的 links.json 或通用陣列）
+  if (/\.json$/i.test(filename) || (trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const items = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.links) ? parsed.links : (Array.isArray(parsed.bookmarks) ? parsed.bookmarks : null));
+      if (items) {
+        const result = [];
+        for (const item of items) {
+          if (!item) continue;
+          const rawUrl = item.url || item.href || item.link;
+          const url = norm(rawUrl);
+          if (url) {
+            const u = new URL(url);
+            result.push({
+              id: item.id || uid(),
+              title: (item.title || item.name || u.hostname).trim(),
+              url,
+              host: u.hostname,
+              folder: item.folder || item.category || baseName,
+              selected: item.selected !== false
+            });
+          }
+        }
+        if (result.length > 0) return result;
+      }
+    } catch {}
+  }
+
+  // 3. CSV 格式
+  if (/\.csv$/i.test(filename) || /^(資料夾|folder|title|標題|url|網址)/i.test(trimmed)) {
+    const csvResult = parseCsv(trimmed, baseName);
+    if (csvResult.length > 0) return csvResult;
+  }
+
+  // 4. Markdown 格式
+  if (/\.md$/i.test(filename) || /\[.*?\]\(https?:\/\/.*?\)/.test(trimmed)) {
+    const mdResult = parseMarkdown(trimmed, baseName);
+    if (mdResult.length > 0) return mdResult;
+  }
+
+  // 5. 純文字通用提取
+  return generic(trimmed, baseName);
+}
+
+// 準備檔案
+async function prepare(fileList) {
+  pending = [];
+  const reportEl = $('#fileReport');
+  reportEl.innerHTML = '';
+
+  for (const file of fileList) {
+    try {
+      const text = await file.text();
+      const parsed = parseContent(text, file.name);
+      pending.push(...parsed);
+
+      const fileDiv = document.createElement('div');
+      fileDiv.className = 'file';
+      fileDiv.innerHTML = `<span>${escapeHtml(file.name)}</span><b>${parsed.length} 筆資料</b>`;
+      reportEl.appendChild(fileDiv);
+    } catch (err) {
+      console.error('File read error:', err);
+      toast(`讀取 ${file.name} 失敗`);
+    }
+  }
+
+  $('#confirm').disabled = !pending.length;
+  toast(`已偵測 ${pending.length} 筆資料`);
+}
+
+// 去重邏輯
+function dedupe(items, mode) {
+  if (mode === 'all') return items;
+  const map = new Map();
+
+  for (const item of items) {
+    if (!map.has(item.url)) {
+      map.set(item.url, { ...item });
+    } else if (mode === 'last') {
+      map.set(item.url, { ...item });
+    } else if (mode === 'merge') {
+      const existing = map.get(item.url);
+      const combined = new Set([...existing.folder.split('；'), item.folder].filter(Boolean));
+      existing.folder = [...combined].join('；');
+    }
+  }
+
+  return [...map.values()];
+}
+
+// 篩選與渲染
+function getVisibleLinks() {
+  const q = ($('#q').value || '').trim().toLowerCase();
+  const f = $('#folder').value;
+  return links.filter(x => {
+    const matchFolder = (f === 'all' || x.folder === f);
+    const matchQuery = !q || `${x.title} ${x.url} ${x.folder} ${x.host}`.toLowerCase().includes(q);
+    return matchFolder && matchQuery;
+  });
+}
+
+function updateSummary() {
+  const visible = getVisibleLinks();
+  const selectedCount = links.filter(x => x.selected).length;
+  $('#summary').textContent = `共 ${visible.length} 筆，已選 ${selectedCount} 筆`;
+}
+
+function renderTree(folders) {
+  const currentFolder = $('#folder').value;
+  const allCount = links.length;
+
+  let html = `<div class="folder ${currentFolder === 'all' ? 'active' : ''}" data-folder="all">📁 全部資料夾 <span>(${allCount})</span></div>`;
+
+  html += folders.map(folderName => {
+    const count = links.filter(y => y.folder === folderName).length;
+    const isActive = currentFolder === folderName;
+    return `<div class="folder ${isActive ? 'active' : ''}" data-folder="${escapeHtml(folderName)}">📁 ${escapeHtml(folderName)} <span>(${count})</span></div>`;
+  }).join('');
+
+  $('#tree').innerHTML = html;
+}
+
+function renderList() {
+  const visible = getVisibleLinks();
+  updateSummary();
+
+  if (!visible.length) {
+    $('#rows').innerHTML = links.length
+      ? '<div class="empty">沒有符合篩選條件的書籤</div>'
+      : '<div class="empty">請先匯入檔案</div>';
+    return;
+  }
+
+  $('#rows').innerHTML = visible.map(x => `
+    <div class="row" data-id="${escapeHtml(x.id)}">
+      <input type="checkbox" data-id="${escapeHtml(x.id)}" ${x.selected ? 'checked' : ''} aria-label="選取 ${escapeHtml(x.title)}">
+      <div>
+        <b>${escapeHtml(x.title)}</b>
+        <small>📁 ${escapeHtml(x.folder)}</small>
+      </div>
+      <a href="${escapeHtml(x.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(x.url)}</a>
+      <span>${escapeHtml(x.host)}</span>
+    </div>
+  `).join('');
+}
+
+function render(updateFolders = true) {
+  const folders = [...new Set(links.map(x => x.folder))].filter(Boolean).sort();
+
+  if (updateFolders) {
+    const currentFolder = $('#folder').value;
+    $('#folder').innerHTML = '<option value="all">全部資料夾</option>' +
+      folders.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
+
+    if (folders.includes(currentFolder)) {
+      $('#folder').value = currentFolder;
+    } else {
+      $('#folder').value = 'all';
+    }
+  }
+
+  renderTree(folders);
+  renderList();
+}
+
+// 儲存狀態（含配額防護與防抖處理）
+let saveTimer = null;
+function saveDebounced() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 300);
+}
+
+function save() {
+  try {
+    localStorage.setItem(DATA, JSON.stringify({
+      links,
+      dedupe: $('#dedupe').value,
+      dark: document.documentElement.classList.contains('dark')
+    }));
+  } catch (err) {
+    console.warn('localStorage save failed:', err);
+    if (err && err.name === 'QuotaExceededError') {
+      toast('儲存失敗：瀏覽器空間已滿');
+    }
+  }
+}
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(DATA) || '{}');
+    links = Array.isArray(saved.links) ? saved.links : [];
+    if (saved.dedupe) $('#dedupe').value = saved.dedupe;
+    document.documentElement.classList.toggle('dark', !!saved.dark);
+  } catch (err) {
+    console.warn('localStorage load failed:', err);
+  }
+  render(true);
+  applyBrand();
+}
+
+// 下載檔案輔助函式
+function dl(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function chosen() {
+  return links.filter(x => x.selected);
+}
+
+// 品牌客製化
+function applyBrand() {
+  let b = {};
+  try {
+    b = JSON.parse(localStorage.getItem(BRAND) || '{}');
+  } catch {}
+
+  const name = b.name || 'LinkGrabber for GitHub';
+  const subtitle = b.subtitle || '免擴充套件整理瀏覽器書籤';
+  const color = b.color || '#4f46e5';
+  const logo = b.logo || './assets/logo.svg';
+
+  $('#brandName').textContent = name;
+  $('#brandSubtitle').textContent = subtitle;
+  $('#brandLogo').src = logo;
+  $('#logoPreview').src = logo;
+  $('#projectName').value = name;
+  $('#projectSubtitle').value = subtitle;
+  $('#brandColor').value = color;
+
+  document.documentElement.style.setProperty('--brand', color);
+  document.title = name;
+}
+
+function saveBrand() {
+  try {
+    const b = {
+      name: $('#projectName').value.trim() || 'LinkGrabber for GitHub',
+      subtitle: $('#projectSubtitle').value.trim() || '免擴充套件整理瀏覽器書籤',
+      color: $('#brandColor').value,
+      logo: $('#logoPreview').src
+    };
+    localStorage.setItem(BRAND, JSON.stringify(b));
+    applyBrand();
+    $('#settings').close();
+    toast('品牌設定已儲存');
+  } catch (err) {
+    console.warn('saveBrand failed:', err);
+    if (err && err.name === 'QuotaExceededError') {
+      toast('儲存失敗：自訂 Logo 或設定過大，超出儲存空間');
+    } else {
+      toast('儲存失敗，請重試');
+    }
+  }
+}
+
+// 事件綁定
+const drop = $('#drop');
+const files = $('#files');
+
+drop.onclick = () => files.click();
+drop.onkeydown = e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    files.click();
+  }
+};
+
+files.onchange = e => prepare([...e.target.files]);
+
+drop.ondragover = e => {
+  e.preventDefault();
+  drop.classList.add('drag');
+};
+drop.ondragleave = () => drop.classList.remove('drag');
+drop.ondrop = e => {
+  e.preventDefault();
+  drop.classList.remove('drag');
+  if (e.dataTransfer && e.dataTransfer.files) {
+    prepare([...e.dataTransfer.files]);
+  }
+};
+
+// 確認匯入：支援追加或覆蓋
+$('#confirm').onclick = () => {
+  const mode = $('#importMode')?.value || 'append';
+  const targetList = mode === 'replace' ? pending : [...links, ...pending];
+  links = dedupe(targetList.map(x => ({ ...x })), $('#dedupe').value);
+  pending = [];
+  $('#fileReport').innerHTML = '';
+  $('#confirm').disabled = true;
+  render(true);
+  save();
+  toast(`已匯入並整理完成，目前共 ${links.length} 筆`);
+};
+
+// 搜尋與篩選（防抖搜尋，不頻繁寫入 storage）
+let searchTimer = null;
+$('#q').oninput = () => {
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    renderList();
+  }, 120);
+};
+
+$('#folder').onchange = () => {
+  const folders = [...new Set(links.map(x => x.folder))].filter(Boolean).sort();
+  renderTree(folders);
+  renderList();
+};
+
+// 點擊左側資料夾樹狀清單可直接切換篩選
+$('#tree').onclick = e => {
+  const item = e.target.closest('.folder');
+  if (item && item.dataset.folder) {
+    const targetFolder = item.dataset.folder;
+    $('#folder').value = targetFolder;
+    const folders = [...new Set(links.map(x => x.folder))].filter(Boolean).sort();
+    renderTree(folders);
+    renderList();
+  }
+};
+
+// 列表核取方塊操作：不重構全部 DOM，保留輸入焦點
+$('#rows').onchange = e => {
+  if (e.target.type === 'checkbox') {
+    const id = e.target.dataset.id;
+    const item = links.find(x => x.id === id);
+    if (item) {
+      item.selected = e.target.checked;
+      updateSummary();
+      saveDebounced();
+    }
+  }
+};
+
+$('#all').onclick = () => {
+  links.forEach(x => x.selected = true);
+  renderList();
+  saveDebounced();
+  toast('已全選');
+};
+
+$('#none').onclick = () => {
+  links.forEach(x => x.selected = false);
+  renderList();
+  saveDebounced();
+  toast('已取消全選');
+};
+
+$('#clear').onclick = () => {
+  if (links.length === 0) return;
+  if (confirm('確定要清除所有已匯入的書籤資料嗎？')) {
+    links = [];
+    render(true);
+    save();
+    toast('已清除所有資料');
+  }
+};
+
+// 匯出功能與回饋
+$('#copy').onclick = async () => {
+  const items = chosen();
+  if (!items.length) return toast('請先勾選要複製的網址');
+  try {
+    await navigator.clipboard.writeText(items.map(x => x.url).join('\n'));
+    toast(`已複製 ${items.length} 筆網址到剪貼簿`);
+  } catch {
+    toast('複製失敗，請手動複製');
+  }
+};
+
+$('#md').onclick = async () => {
+  const items = chosen();
+  if (!items.length) return toast('請先勾選要複製的項目');
+  try {
+    const markdown = items.map(x => `- [${x.title.replace(/[\[\]]/g, '\\$&')}](${x.url})`).join('\n');
+    await navigator.clipboard.writeText(markdown);
+    toast(`已複製 ${items.length} 筆 Markdown 連結`);
+  } catch {
+    toast('複製失敗，請手動複製');
+  }
+};
+
+$('#csv').onclick = () => {
+  const items = chosen();
+  if (!items.length) return toast('請先勾選要匯出的項目');
+  const header = '\ufeff資料夾,標題,網址,網域\n';
+  const rows = items.map(x =>
+    [x.folder, x.title, x.url, x.host]
+      .map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"')
+      .join(',')
+  ).join('\n');
+  dl('links.csv', header + rows, 'text/csv;charset=utf-8');
+  toast(`已匯出 ${items.length} 筆至 CSV`);
+};
+
+$('#json').onclick = () => {
+  const items = chosen();
+  if (!items.length) return toast('請先勾選要匯出的項目');
+  dl('links.json', JSON.stringify(items, null, 2), 'application/json');
+  toast(`已匯出 ${items.length} 筆至 JSON`);
+};
+
+$('#print').onclick = () => window.print();
+
+$('#theme').onclick = () => {
+  document.documentElement.classList.toggle('dark');
+  save();
+};
+
+$('#guideToggle').onclick = () => {
+  $('.guide').classList.toggle('collapsed');
+  $('#guideToggle').textContent = $('.guide').classList.contains('collapsed') ? '展開說明' : '收合說明';
+};
+
+$('#openSettings').onclick = () => $('#settings').showModal();
+$('#saveBrand').onclick = saveBrand;
+$('#resetBrand').onclick = () => {
+  localStorage.removeItem(BRAND);
+  applyBrand();
+  toast('已恢復預設品牌設定');
+};
+
+$('#brandColor').oninput = e => {
+  document.documentElement.style.setProperty('--brand', e.target.value);
+};
+
+$('#logoFile').onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) return toast('Logo 請小於 1 MB');
+  const reader = new FileReader();
+  reader.onload = () => {
+    $('#logoPreview').src = reader.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+// 初始化載入
+load();
+
+// Service Worker 註冊
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.warn('SW registration failed:', err);
+    });
+  });
+}
