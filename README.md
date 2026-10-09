@@ -4,12 +4,13 @@
 
 ## 功能
 
+- **NotebookLM 專用匯出**：一鍵複製專為 NotebookLM 優化的結構化知識庫 Markdown 格式，附帶單一筆記本 50 筆來源上限即時提示
 - 內建 Chrome、Microsoft Edge、Firefox、Safari 書籤匯出與快捷鍵指引（支援 Windows / Mac）
 - 拖放多個書籤 HTML、JSON、CSV、Markdown 或 TXT
 - 完整保留書籤資料夾路徑與階層結構
 - 重複網址處理：保留第一次、最後一次、合併來源或全部保留
 - 搜尋、資料夾篩選，**支援指定資料夾或自訂範圍匯出**
-- 支援匯出為 **標準瀏覽器書籤 HTML**、CSV、JSON、Markdown、純網址複製
+- 支援匯出為 **NotebookLM 知識庫格式**、**標準瀏覽器書籤 HTML**、CSV、JSON、Markdown、純網址複製
 - 自訂專案名稱、副標題、主色及 Logo
 - localStorage、深色模式、RWD、PWA及列印版面
 

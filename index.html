@@ -71,6 +71,12 @@
           <p class="export-step">點上方「匯入及備份」→「匯出書籤成 HTML」。</p>
           <p class="export-step"><b>Safari (Mac)：</b>上方選單列點「檔案」→「匯出書籤...」即存為 HTML。</p>
         </article>
+        <article>
+          <h3>⑤ 匯入 NotebookLM</h3>
+          <p>將精選書籤匯入 NotebookLM 建立 AI 知識庫：</p>
+          <div class="hotkey-row"><span>單一筆記本建議</span><kbd>≤ 50 個來源</kbd></div>
+          <p class="export-step"><b>操作方式：</b>篩選目標資料夾 → 點擊「✨ NotebookLM」複製 → 到 NotebookLM 點「新增來源」貼上文字！</p>
+        </article>
       </div>
       <div class="guide-footer">
         <span>📁 <b>匯出的檔案存在哪裡？</b> 瀏覽器匯出的書籤 HTML 檔案預設保存在電腦的<b>「下載」資料夾</b>（Mac：<code>~/Downloads</code>、Windows：<code>下載 (Downloads)</code>）；若有跳出另存新檔視窗，則會儲存至您指定的資料夾。</span>
@@ -148,9 +154,11 @@
               <option value="all">所有資料夾全部書籤</option>
             </select>
           </label>
+          <span id="nlmBadge" class="nlm-badge"></span>
         </div>
         <div class="actions-btns">
-          <button id="html" class="primary" title="匯出標準 Netscape Bookmark HTML 檔案">書籤 HTML</button>
+          <button id="notebooklm" class="primary notebooklm-btn" title="一鍵複製專為 NotebookLM 優化的結構化資料與大綱">✨ NotebookLM</button>
+          <button id="html" title="匯出標準 Netscape Bookmark HTML 檔案">書籤 HTML</button>
           <button id="copy">複製網址</button>
           <button id="md">Markdown</button>
           <button id="csv">CSV</button>

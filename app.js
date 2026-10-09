@@ -358,6 +358,22 @@ function updateSummary() {
     scopeSelect.options[1].textContent = `所有已勾選書籤 (${selectedCount} 筆)`;
     scopeSelect.options[2].textContent = `全部資料夾書籤 (${links.length} 筆)`;
   }
+
+  // 即時更新 NotebookLM 50 筆上限提示標籤
+  const nlmBadge = $('#nlmBadge');
+  if (nlmBadge) {
+    const targetCount = getTargetItems().length;
+    if (targetCount === 0) {
+      nlmBadge.textContent = '';
+      nlmBadge.className = 'nlm-badge';
+    } else if (targetCount <= 50) {
+      nlmBadge.className = 'nlm-badge ok';
+      nlmBadge.textContent = `📗 適合 NotebookLM (${targetCount} / 50 筆來源)`;
+    } else {
+      nlmBadge.className = 'nlm-badge warn';
+      nlmBadge.textContent = `⚠️ 目前 ${targetCount} 筆（超出 NotebookLM 50 筆上限，建議篩選資料夾）`;
+    }
+  }
 }
 
 function renderTree(folders) {
@@ -543,6 +559,36 @@ ${renderTree(root, 4)}</DL><p>
 `;
 }
 
+// 產生專為 NotebookLM 優化的結構化知識庫 Markdown 文字
+function generateNotebookLmText(items) {
+  const currentFolder = $('#folder')?.value || 'all';
+  const folderTitle = currentFolder !== 'all' ? `【${currentFolder}】` : '【完整整理】';
+
+  // 依資料夾主題分組
+  const groups = new Map();
+  for (const item of items) {
+    const f = item.folder || '未分類書籤';
+    if (!groups.has(f)) groups.set(f, []);
+    groups.get(f).push(item);
+  }
+
+  let text = `# ${folderTitle} 參考資源與研究清單 (NotebookLM 知識庫來源)\n\n`;
+  text += `> 本份清單共收錄 ${items.length} 筆精選主題網址，整理自瀏覽器書籤，供 NotebookLM 進行主題研讀、問答檢索與語音概覽 (Deep Dive Podcast) 使用。\n\n`;
+
+  for (const [folderName, list] of groups.entries()) {
+    text += `## 📁 主題分類：${folderName} (${list.length} 筆)\n\n`;
+    for (const item of list) {
+      const cleanTitle = (item.title || item.host || item.url).replace(/[\\[\\]]/g, '\\$&').trim();
+      text += `- **[${cleanTitle}](${item.url})**\n`;
+      text += `  - 來源網域: \`${item.host}\`\n`;
+      text += `  - 完整網址: ${item.url}\n\n`;
+    }
+  }
+
+  text += `---\n*提示：在 NotebookLM 建立來源後，可直接提問「請根據上述資源整理出關鍵學習要點」或「請分析各參考資料的異同與關聯」。*\n`;
+  return text;
+}
+
 // 品牌客製化
 function applyBrand() {
   let b = {};
@@ -712,6 +758,25 @@ if (exportScopeSelect) {
 }
 
 // 匯出功能與回饋
+const nlmBtn = $('#notebooklm');
+if (nlmBtn) {
+  nlmBtn.onclick = async () => {
+    const items = getTargetItems();
+    if (!items.length) return toast('沒有符合條件的書籤可匯出至 NotebookLM');
+    const content = generateNotebookLmText(items);
+    try {
+      await navigator.clipboard.writeText(content);
+      if (items.length > 50) {
+        toast(`已複製 ${items.length} 筆 NotebookLM 格式（⚠️ 超出 50 筆上限，建議分批貼上）`);
+      } else {
+        toast(`✨ 已複製 ${items.length} 筆！可直接至 NotebookLM 點「貼上文字」`);
+      }
+    } catch {
+      toast('複製失敗，請手動複製');
+    }
+  };
+}
+
 const htmlBtn = $('#html');
 if (htmlBtn) {
   htmlBtn.onclick = () => {
