@@ -4,7 +4,7 @@
 
 ## 功能
 
-- 內建 Chrome、Microsoft Edge、Firefox 書籤匯出指引
+- 內建 Chrome、Microsoft Edge、Firefox、Safari 書籤匯出與快捷鍵指引（支援 Windows / Mac）
 - 拖放多個書籤 HTML、JSON、CSV、Markdown 或 TXT
 - 保留書籤資料夾路徑
 - 重複網址處理：保留第一次、最後一次、合併來源或全部保留
