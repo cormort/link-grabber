@@ -506,6 +506,108 @@ input:focus, select:focus {
   border: 1px solid #fde68a;
 }
 
+/* Tooltip System */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #0f172a;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: normal;
+  width: max-content;
+  max-width: 240px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+  z-index: 1000;
+}
+
+[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  border: 5px solid transparent;
+  border-top-color: #0f172a;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+  z-index: 1000;
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:hover::before,
+[data-tooltip]:focus-visible::after,
+[data-tooltip]:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Dark mode for tooltips */
+.dark [data-tooltip]::after {
+  background: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #475569;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.dark [data-tooltip]::before {
+  border-top-color: #1e293b;
+}
+
+/* Tooltip alignment for first & last action buttons */
+.actions-btns button:first-child[data-tooltip]::after {
+  left: 0;
+  transform: translateY(4px);
+}
+.actions-btns button:first-child[data-tooltip]::before {
+  left: 20px;
+  transform: translateY(4px);
+}
+.actions-btns button:first-child[data-tooltip]:hover::after,
+.actions-btns button:first-child[data-tooltip]:focus-visible::after {
+  transform: translateY(0);
+}
+.actions-btns button:first-child[data-tooltip]:hover::before,
+.actions-btns button:first-child[data-tooltip]:focus-visible::before {
+  transform: translateY(0);
+}
+
+.actions-btns button:last-child[data-tooltip]::after {
+  left: auto;
+  right: 0;
+  transform: translateY(4px);
+}
+.actions-btns button:last-child[data-tooltip]::before {
+  left: auto;
+  right: 20px;
+  transform: translateY(4px);
+}
+.actions-btns button:last-child[data-tooltip]:hover::after,
+.actions-btns button:last-child[data-tooltip]:focus-visible::after {
+  transform: translateY(0);
+}
+.actions-btns button:last-child[data-tooltip]:hover::before,
+.actions-btns button:last-child[data-tooltip]:focus-visible::before {
+  transform: translateY(0);
+}
+
 #tree {
   max-height: 260px;
   overflow-y: auto;

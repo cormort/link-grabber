@@ -136,10 +136,10 @@
           </div>
         </div>
         <div class="summary-btns">
-          <button id="all" title="勾選目前資料夾／篩選顯示的所有書籤">全選此清單</button>
-          <button id="none" title="取消勾選目前資料夾／篩選顯示的書籤">取消選取</button>
-          <button id="allGlobal" title="勾選所有資料夾中的全部書籤">全選所有</button>
-          <button id="clear">清除全部</button>
+          <button id="all" data-tooltip="勾選目前資料夾或篩選清單中的所有書籤" aria-label="全選此清單">全選此清單</button>
+          <button id="none" data-tooltip="取消勾選目前資料夾或篩選清單中的書籤" aria-label="取消選取">取消選取</button>
+          <button id="allGlobal" data-tooltip="一鍵勾選所有資料夾中的全部書籤" aria-label="全選所有">全選所有</button>
+          <button id="clear" data-tooltip="清空目前載入的所有書籤資料" aria-label="清除全部">清除全部</button>
         </div>
       </section>
 
@@ -157,13 +157,13 @@
 
       <section class="actions">
         <div class="actions-btns">
-          <button id="notebooklm" class="primary notebooklm-btn" title="一鍵複製專為 NotebookLM 優化的結構化資料與大綱">✨ NotebookLM</button>
-          <button id="html" title="匯出標準 Netscape Bookmark HTML 檔案">書籤 HTML</button>
-          <button id="copy">複製網址</button>
-          <button id="md">Markdown</button>
-          <button id="csv">CSV</button>
-          <button id="json">JSON</button>
-          <button id="print">列印</button>
+          <button id="notebooklm" class="primary notebooklm-btn" data-tooltip="複製專為 NotebookLM 優化的結構化 Markdown（保留書籤標題與資料夾階層，可直接貼入 NotebookLM「貼上文字」建立知識庫）" aria-label="NotebookLM 專用格式">✨ NotebookLM</button>
+          <button id="html" data-tooltip="匯出為標準瀏覽器書籤 HTML（Netscape 格式，可重新匯入回 Chrome、Edge、Firefox 或 Safari）" aria-label="匯出書籤 HTML">書籤 HTML</button>
+          <button id="copy" data-tooltip="僅複製純網址清單（一行一個 URL，不含標題與分類）" aria-label="複製網址">複製網址</button>
+          <button id="md" data-tooltip="複製標準 Markdown 超連結（- [標題](網址)，適合貼入 Notion、Obsidian 或 GitHub）" aria-label="複製 Markdown 連結">Markdown</button>
+          <button id="csv" data-tooltip="下載為 CSV 試算表（含資料夾、標題、網址、網域，可用 Excel 或 Google 試算表開啟）" aria-label="匯出 CSV">CSV</button>
+          <button id="json" data-tooltip="下載為結構化 JSON 資料檔（保留完整屬性，適合程式串接或備份）" aria-label="匯出 JSON">JSON</button>
+          <button id="print" data-tooltip="開啟列印預覽，自動套用乾淨列印排版（可另存為 PDF）" aria-label="列印或存為 PDF">列印</button>
         </div>
       </section>
     </article>
