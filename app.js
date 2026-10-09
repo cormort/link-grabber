@@ -341,7 +341,23 @@ function getVisibleLinks() {
 function updateSummary() {
   const visible = getVisibleLinks();
   const selectedCount = links.filter(x => x.selected).length;
-  $('#summary').textContent = `共 ${visible.length} 筆，已選 ${selectedCount} 筆`;
+  const currentFolder = $('#folder')?.value || 'all';
+
+  if (currentFolder !== 'all') {
+    const visibleSelected = visible.filter(x => x.selected).length;
+    $('#summary').textContent = `資料夾「${currentFolder}」：共 ${visible.length} 筆 (已選 ${visibleSelected} 筆)`;
+  } else {
+    $('#summary').textContent = `全部資料夾：共 ${visible.length} 筆，已選 ${selectedCount} 筆`;
+  }
+
+  // 即時更新匯出範圍選單顯示之筆數與名稱
+  const scopeSelect = $('#exportScope');
+  if (scopeSelect && scopeSelect.options && scopeSelect.options.length >= 3) {
+    const folderLabel = currentFolder !== 'all' ? `目前資料夾「${currentFolder}」(${visible.length} 筆)` : `目前篩選清單 (${visible.length} 筆)`;
+    scopeSelect.options[0].textContent = folderLabel;
+    scopeSelect.options[1].textContent = `所有已勾選書籤 (${selectedCount} 筆)`;
+    scopeSelect.options[2].textContent = `全部資料夾書籤 (${links.length} 筆)`;
+  }
 }
 
 function renderTree(folders) {
@@ -450,8 +466,81 @@ function dl(filename, content, mimeType) {
   URL.revokeObjectURL(url);
 }
 
-function chosen() {
+// 取得欲匯出的目標書籤清單（依匯出範圍）
+function getTargetItems() {
+  const scope = $('#exportScope')?.value || 'visible';
+  if (scope === 'visible') {
+    const visible = getVisibleLinks();
+    const checked = visible.filter(x => x.selected);
+    // 若當前清單中有個別勾選，匯出已勾選項目；若全勾或都沒勾，則匯出全部可見項目
+    return checked.length > 0 ? checked : visible;
+  }
+  if (scope === 'all') {
+    return links;
+  }
+  // scope === 'selected'
   return links.filter(x => x.selected);
+}
+
+// 產生匯出檔名（當指定資料夾時自動加上資料夾名稱）
+function getExportBaseName(prefix) {
+  const currentFolder = $('#folder')?.value;
+  const scope = $('#exportScope')?.value || 'visible';
+  if (scope === 'visible' && currentFolder && currentFolder !== 'all') {
+    const cleanFolder = currentFolder.replace(/[/\\?%*:|"<>]/g, '_').trim();
+    return `${prefix}_${cleanFolder}`;
+  }
+  return prefix;
+}
+
+// 產生標準 Netscape 書籤 HTML
+function generateBookmarkHtml(items) {
+  const root = { children: {}, bookmarks: [] };
+
+  for (const item of items) {
+    const parts = (item.folder || '').split(' / ').map(p => p.trim()).filter(Boolean);
+    let current = root;
+    for (const part of parts) {
+      if (!current.children[part]) {
+        current.children[part] = { children: {}, bookmarks: [] };
+      }
+      current = current.children[part];
+    }
+    current.bookmarks.push(item);
+  }
+
+  function renderTree(node, indent = 4) {
+    const sp = ' '.repeat(indent);
+    let html = '';
+
+    for (const bm of node.bookmarks) {
+      const title = escapeHtml(bm.title || bm.host || bm.url);
+      const url = escapeHtml(bm.url);
+      html += `${sp}<DT><A HREF="${url}">${title}</A>\n`;
+    }
+
+    for (const name of Object.keys(node.children)) {
+      const childNode = node.children[name];
+      const safeName = escapeHtml(name);
+      html += `${sp}<DT><H3>${safeName}</H3>\n`;
+      html += `${sp}<DL><p>\n`;
+      html += renderTree(childNode, indent + 4);
+      html += `${sp}</DL><p>\n`;
+    }
+
+    return html;
+  }
+
+  return `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- This is an automatically generated file.
+     It will be read and overwritten.
+     DO NOT EDIT! -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+${renderTree(root, 4)}</DL><p>
+`;
 }
 
 // 品牌客製化
@@ -581,18 +670,30 @@ $('#rows').onchange = e => {
 };
 
 $('#all').onclick = () => {
-  links.forEach(x => x.selected = true);
+  const visible = getVisibleLinks();
+  visible.forEach(x => x.selected = true);
   renderList();
   saveDebounced();
-  toast('已全選');
+  toast(`已全選目前清單 (${visible.length} 筆)`);
 };
 
 $('#none').onclick = () => {
-  links.forEach(x => x.selected = false);
+  const visible = getVisibleLinks();
+  visible.forEach(x => x.selected = false);
   renderList();
   saveDebounced();
-  toast('已取消全選');
+  toast('已取消選取目前清單');
 };
+
+const allGlobalBtn = $('#allGlobal');
+if (allGlobalBtn) {
+  allGlobalBtn.onclick = () => {
+    links.forEach(x => x.selected = true);
+    renderList();
+    saveDebounced();
+    toast(`已全選所有資料夾書籤 (${links.length} 筆)`);
+  };
+}
 
 $('#clear').onclick = () => {
   if (links.length === 0) return;
@@ -604,10 +705,28 @@ $('#clear').onclick = () => {
   }
 };
 
+// 監聽匯出範圍切換
+const exportScopeSelect = $('#exportScope');
+if (exportScopeSelect) {
+  exportScopeSelect.onchange = updateSummary;
+}
+
 // 匯出功能與回饋
+const htmlBtn = $('#html');
+if (htmlBtn) {
+  htmlBtn.onclick = () => {
+    const items = getTargetItems();
+    if (!items.length) return toast('沒有符合條件的書籤可匯出');
+    const filename = `${getExportBaseName('bookmarks')}.html`;
+    const content = generateBookmarkHtml(items);
+    dl(filename, content, 'text/html;charset=utf-8');
+    toast(`已匯出 ${items.length} 筆至「${filename}」`);
+  };
+}
+
 $('#copy').onclick = async () => {
-  const items = chosen();
-  if (!items.length) return toast('請先勾選要複製的網址');
+  const items = getTargetItems();
+  if (!items.length) return toast('沒有符合條件的網址可複製');
   try {
     await navigator.clipboard.writeText(items.map(x => x.url).join('\n'));
     toast(`已複製 ${items.length} 筆網址到剪貼簿`);
@@ -617,8 +736,8 @@ $('#copy').onclick = async () => {
 };
 
 $('#md').onclick = async () => {
-  const items = chosen();
-  if (!items.length) return toast('請先勾選要複製的項目');
+  const items = getTargetItems();
+  if (!items.length) return toast('沒有符合條件的書籤可複製');
   try {
     const markdown = items.map(x => `- [${x.title.replace(/[\[\]]/g, '\\$&')}](${x.url})`).join('\n');
     await navigator.clipboard.writeText(markdown);
@@ -629,23 +748,25 @@ $('#md').onclick = async () => {
 };
 
 $('#csv').onclick = () => {
-  const items = chosen();
-  if (!items.length) return toast('請先勾選要匯出的項目');
+  const items = getTargetItems();
+  if (!items.length) return toast('沒有符合條件的書籤可匯出');
+  const filename = `${getExportBaseName('links')}.csv`;
   const header = '\ufeff資料夾,標題,網址,網域\n';
   const rows = items.map(x =>
     [x.folder, x.title, x.url, x.host]
       .map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"')
       .join(',')
   ).join('\n');
-  dl('links.csv', header + rows, 'text/csv;charset=utf-8');
-  toast(`已匯出 ${items.length} 筆至 CSV`);
+  dl(filename, header + rows, 'text/csv;charset=utf-8');
+  toast(`已匯出 ${items.length} 筆至「${filename}」`);
 };
 
 $('#json').onclick = () => {
-  const items = chosen();
-  if (!items.length) return toast('請先勾選要匯出的項目');
-  dl('links.json', JSON.stringify(items, null, 2), 'application/json');
-  toast(`已匯出 ${items.length} 筆至 JSON`);
+  const items = getTargetItems();
+  if (!items.length) return toast('沒有符合條件的書籤可匯出');
+  const filename = `${getExportBaseName('links')}.json`;
+  dl(filename, JSON.stringify(items, null, 2), 'application/json');
+  toast(`已匯出 ${items.length} 筆至「${filename}」`);
 };
 
 $('#print').onclick = () => window.print();

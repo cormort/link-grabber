@@ -115,11 +115,14 @@
 
     <article class="work">
       <section class="summary">
-        <strong id="summary">尚無資料</strong>
         <div>
-          <button id="all">全選</button>
-          <button id="none">取消</button>
-          <button id="clear">清除</button>
+          <strong id="summary">尚無資料</strong>
+        </div>
+        <div class="summary-btns">
+          <button id="all" title="勾選目前資料夾／篩選顯示的所有書籤">全選此清單</button>
+          <button id="none" title="取消勾選目前資料夾／篩選顯示的書籤">取消選取</button>
+          <button id="allGlobal" title="勾選所有資料夾中的全部書籤">全選所有</button>
+          <button id="clear">清除全部</button>
         </div>
       </section>
 
@@ -136,11 +139,24 @@
       </section>
 
       <section class="actions">
-        <button id="copy" class="primary">複製網址</button>
-        <button id="md">Markdown</button>
-        <button id="csv">CSV</button>
-        <button id="json">JSON</button>
-        <button id="print">列印</button>
+        <div class="actions-scope">
+          <label>
+            匯出範圍：
+            <select id="exportScope" aria-label="選擇匯出範圍">
+              <option value="visible">目前資料夾／篩選結果</option>
+              <option value="selected">所有已勾選書籤</option>
+              <option value="all">所有資料夾全部書籤</option>
+            </select>
+          </label>
+        </div>
+        <div class="actions-btns">
+          <button id="html" class="primary" title="匯出標準 Netscape Bookmark HTML 檔案">書籤 HTML</button>
+          <button id="copy">複製網址</button>
+          <button id="md">Markdown</button>
+          <button id="csv">CSV</button>
+          <button id="json">JSON</button>
+          <button id="print">列印</button>
+        </div>
       </section>
     </article>
   </main>

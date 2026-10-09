@@ -329,11 +329,17 @@ input:focus, select:focus {
 
 .summary {
   padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.summary > div {
+.summary-btns {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .list {
@@ -402,6 +408,38 @@ input:focus, select:focus {
 }
 
 .actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.actions-scope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actions-scope label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.actions-scope select {
+  width: auto;
+  min-width: 210px;
+  margin: 0;
+  padding: 7px 10px;
+  font-weight: normal;
+}
+
+.actions-btns {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -594,6 +632,10 @@ dialog form {
 .dark .guide-footer code {
   background: #1e293b;
   color: #38bdf8;
+}
+
+.dark .actions-scope label {
+  color: #cbd5e1;
 }
 
 .dark .guide {
