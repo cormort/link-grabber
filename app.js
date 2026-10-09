@@ -660,6 +660,24 @@ $('#guideToggle').onclick = () => {
   $('#guideToggle').textContent = $('.guide').classList.contains('collapsed') ? '展開說明' : '收合說明';
 };
 
+// 複製瀏覽器內部指令（chrome://bookmarks/ 等）
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('.copy-cmd-btn');
+  if (btn && btn.dataset.copy) {
+    try {
+      await navigator.clipboard.writeText(btn.dataset.copy);
+      const originalText = btn.textContent;
+      btn.textContent = '已複製！';
+      toast(`已複製指令：${btn.dataset.copy}`);
+      setTimeout(() => {
+        btn.textContent = originalText;
+      }, 1500);
+    } catch {
+      toast('複製失敗，請手動選取複製');
+    }
+  }
+});
+
 $('#openSettings').onclick = () => $('#settings').showModal();
 $('#saveBrand').onclick = saveBrand;
 $('#resetBrand').onclick = () => {
