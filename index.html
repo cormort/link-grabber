@@ -121,8 +121,19 @@
 
     <article class="work">
       <section class="summary">
-        <div>
+        <div class="summary-info">
           <strong id="summary">尚無資料</strong>
+          <div class="scope-control">
+            <label>
+              匯出範圍：
+              <select id="exportScope" aria-label="選擇匯出範圍">
+                <option value="visible">目前資料夾／篩選結果</option>
+                <option value="selected">所有已勾選書籤</option>
+                <option value="all">所有資料夾全部書籤</option>
+              </select>
+            </label>
+            <span id="nlmBadge" class="nlm-badge"></span>
+          </div>
         </div>
         <div class="summary-btns">
           <button id="all" title="勾選目前資料夾／篩選顯示的所有書籤">全選此清單</button>
@@ -145,17 +156,6 @@
       </section>
 
       <section class="actions">
-        <div class="actions-scope">
-          <label>
-            匯出範圍：
-            <select id="exportScope" aria-label="選擇匯出範圍">
-              <option value="visible">目前資料夾／篩選結果</option>
-              <option value="selected">所有已勾選書籤</option>
-              <option value="all">所有資料夾全部書籤</option>
-            </select>
-          </label>
-          <span id="nlmBadge" class="nlm-badge"></span>
-        </div>
         <div class="actions-btns">
           <button id="notebooklm" class="primary notebooklm-btn" title="一鍵複製專為 NotebookLM 優化的結構化資料與大綱">✨ NotebookLM</button>
           <button id="html" title="匯出標準 Netscape Bookmark HTML 檔案">書籤 HTML</button>

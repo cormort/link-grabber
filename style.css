@@ -328,18 +328,55 @@ input:focus, select:focus {
 }
 
 .summary {
-  padding: 14px;
+  padding: 14px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
+  gap: 14px;
+}
+
+.summary-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary-info strong {
+  font-size: 15px;
+}
+
+.scope-control {
+  display: flex;
+  align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.scope-control label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.scope-control select {
+  width: auto;
+  min-width: 210px;
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: normal;
 }
 
 .summary-btns {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .list {
@@ -409,40 +446,18 @@ input:focus, select:focus {
 
 .actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-}
-
-.actions-scope {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.actions-scope label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #334155;
-  white-space: nowrap;
-}
-
-.actions-scope select {
-  width: auto;
-  min-width: 210px;
-  margin: 0;
-  padding: 7px 10px;
-  font-weight: normal;
+  padding: 14px 16px;
 }
 
 .actions-btns {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .notebooklm-btn {
@@ -671,7 +686,7 @@ dialog form {
   color: #38bdf8;
 }
 
-.dark .actions-scope label {
+.dark .scope-control label {
   color: #cbd5e1;
 }
 
