@@ -359,7 +359,7 @@ function updateSummary() {
     scopeSelect.options[2].textContent = `全部資料夾書籤 (${links.length} 筆)`;
   }
 
-  // 即時更新 NotebookLM 50 筆上限提示標籤
+  // 即時更新 NotebookLM「網站」來源 50 個上限提示（每個網址算 1 個來源）
   const nlmBadge = $('#nlmBadge');
   if (nlmBadge) {
     const targetCount = getTargetItems().length;
@@ -368,10 +368,10 @@ function updateSummary() {
       nlmBadge.className = 'nlm-badge';
     } else if (targetCount <= 50) {
       nlmBadge.className = 'nlm-badge ok';
-      nlmBadge.textContent = `📗 適合 NotebookLM (${targetCount} / 50 筆來源)`;
+      nlmBadge.textContent = `📗 可一次貼入 NotebookLM「網站」(${targetCount} / 50 個網址)`;
     } else {
       nlmBadge.className = 'nlm-badge warn';
-      nlmBadge.textContent = `⚠️ 目前 ${targetCount} 筆（超出 NotebookLM 50 筆上限，建議篩選資料夾）`;
+      nlmBadge.textContent = `⚠️ ${targetCount} 個網址（超出 NotebookLM 50 個來源上限，建議篩選資料夾）`;
     }
   }
 }
@@ -486,10 +486,7 @@ function dl(filename, content, mimeType) {
 function getTargetItems() {
   const scope = $('#exportScope')?.value || 'visible';
   if (scope === 'visible') {
-    const visible = getVisibleLinks();
-    const checked = visible.filter(x => x.selected);
-    // 若當前清單中有個別勾選，匯出已勾選項目；若全勾或都沒勾，則匯出全部可見項目
-    return checked.length > 0 ? checked : visible;
+    return getVisibleLinks().filter(x => x.selected);
   }
   if (scope === 'all') {
     return links;
@@ -509,20 +506,28 @@ function getExportBaseName(prefix) {
   return prefix;
 }
 
+// Markdown 連結網址：編碼括號與空白，避免截斷
+function mdUrl(url) {
+  return url.replace(/[()\s]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
+}
+
 // 產生標準 Netscape 書籤 HTML
 function generateBookmarkHtml(items) {
-  const root = { children: {}, bookmarks: [] };
+  const root = { children: new Map(), bookmarks: [] };
 
   for (const item of items) {
-    const parts = (item.folder || '').split(' / ').map(p => p.trim()).filter(Boolean);
-    let current = root;
-    for (const part of parts) {
-      if (!current.children[part]) {
-        current.children[part] = { children: {}, bookmarks: [] };
+    // 合併模式下同一網址可能屬於多個資料夾（以「；」分隔），每個資料夾各放一份
+    for (const folder of (item.folder || '').split('；')) {
+      const parts = folder.split(' / ').map(p => p.trim()).filter(Boolean);
+      let current = root;
+      for (const part of parts) {
+        if (!current.children.has(part)) {
+          current.children.set(part, { children: new Map(), bookmarks: [] });
+        }
+        current = current.children.get(part);
       }
-      current = current.children[part];
+      current.bookmarks.push(item);
     }
-    current.bookmarks.push(item);
   }
 
   function renderTree(node, indent = 4) {
@@ -535,8 +540,7 @@ function generateBookmarkHtml(items) {
       html += `${sp}<DT><A HREF="${url}">${title}</A>\n`;
     }
 
-    for (const name of Object.keys(node.children)) {
-      const childNode = node.children[name];
+    for (const [name, childNode] of node.children) {
       const safeName = escapeHtml(name);
       html += `${sp}<DT><H3>${safeName}</H3>\n`;
       html += `${sp}<DL><p>\n`;
@@ -562,7 +566,8 @@ ${renderTree(root, 4)}</DL><p>
 // 產生專為 NotebookLM 優化的結構化知識庫 Markdown 文字
 function generateNotebookLmText(items) {
   const currentFolder = $('#folder')?.value || 'all';
-  const folderTitle = currentFolder !== 'all' ? `【${currentFolder}】` : '【完整整理】';
+  const scope = $('#exportScope')?.value || 'visible';
+  const folderTitle = scope === 'visible' && currentFolder !== 'all' ? `【${currentFolder}】` : '【完整整理】';
 
   // 依資料夾主題分組
   const groups = new Map();
@@ -578,8 +583,8 @@ function generateNotebookLmText(items) {
   for (const [folderName, list] of groups.entries()) {
     text += `## 📁 主題分類：${folderName} (${list.length} 筆)\n\n`;
     for (const item of list) {
-      const cleanTitle = (item.title || item.host || item.url).replace(/[\\[\\]]/g, '\\$&').trim();
-      text += `- **[${cleanTitle}](${item.url})**\n`;
+      const cleanTitle = (item.title || item.host || item.url).replace(/[\[\]]/g, '\\$&').trim();
+      text += `- **[${cleanTitle}](${mdUrl(item.url)})**\n`;
       text += `  - 來源網域: \`${item.host}\`\n`;
       text += `  - 完整網址: ${item.url}\n\n`;
     }
@@ -766,11 +771,7 @@ if (nlmBtn) {
     const content = generateNotebookLmText(items);
     try {
       await navigator.clipboard.writeText(content);
-      if (items.length > 50) {
-        toast(`已複製 ${items.length} 筆 NotebookLM 格式（⚠️ 超出 50 筆上限，建議分批貼上）`);
-      } else {
-        toast(`✨ 已複製 ${items.length} 筆！可直接至 NotebookLM 點「貼上文字」`);
-      }
+      toast(`✨ 已複製 ${items.length} 筆！至 NotebookLM「新增來源」→「複製的文字」貼上`);
     } catch {
       toast('複製失敗，請手動複製');
     }
@@ -804,7 +805,7 @@ $('#md').onclick = async () => {
   const items = getTargetItems();
   if (!items.length) return toast('沒有符合條件的書籤可複製');
   try {
-    const markdown = items.map(x => `- [${x.title.replace(/[\[\]]/g, '\\$&')}](${x.url})`).join('\n');
+    const markdown = items.map(x => `- [${x.title.replace(/[\[\]]/g, '\\$&')}](${mdUrl(x.url)})`).join('\n');
     await navigator.clipboard.writeText(markdown);
     toast(`已複製 ${items.length} 筆 Markdown 連結`);
   } catch {

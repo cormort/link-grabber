@@ -3,7 +3,7 @@
  * 提供離線存取支援與 PWA 快取管理
  */
 
-const CACHE_NAME = 'linkgrabber-v2';
+const CACHE_NAME = 'linkgrabber-v3';
 const STATIC_ASSETS = [
   './',
   './index.html',
